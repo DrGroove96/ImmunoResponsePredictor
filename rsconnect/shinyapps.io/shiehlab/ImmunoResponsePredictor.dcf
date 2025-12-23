@@ -1,0 +1,10 @@
+name: ImmunoResponsePredictor
+title:
+username: shiehlab
+account: shiehlab
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 16337057
+bundleId: 11345480
+url: https://shiehlab.shinyapps.io/ImmunoResponsePredictor/
+version: 1
