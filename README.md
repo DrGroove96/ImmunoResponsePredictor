@@ -8,7 +8,7 @@ This repository contains the code and paper for the ImmunoResponse Predictor gra
 In practice, users upload RNA-seq log2-TPM profile datasets through the GUI. The tool outputs (1) each patient’s cosine distance to responders/non-responders and the corresponding predicted label, and (2) the cohort-level % applicability. High applicability (e.g., >70%) indicates that the new cohort lies in a similar expression space as the training data and that predictions align with the ORR-informed geometric. In such settings, per-patient predictions may support treatment selection or trial enrichment. Low applicability means that the cohort falls outside the model’s applicability domain, and predictions should not be considered to guide clinical decisions.
 
 ## User Interface
-![](Dashboard.png)
+![](Visualizations/Dashboard.png)
 
 ## GUI Input
 
