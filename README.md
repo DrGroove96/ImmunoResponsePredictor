@@ -60,7 +60,7 @@ Once predictions are generated, results can be downloaded as a CSV file containi
 The output of IMvigoz210-PCD4989g (mUC) is shown below.
 
 <p align="center">
-  <img src="PCD(mUC).png" width="900">
+  <img src="Visualizations/PCD(mUC).png" width="900">
 </p>
 
 **Column F** is the predicted labels according to the cutoffs:
