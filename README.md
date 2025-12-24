@@ -67,9 +67,9 @@ The output of IMvigoz210-PCD4989g (mUC) is as follows.
 </p>
 
 **Column F** is the predicted labels according to the cutoffs:
-- **LogitDA score > 0.50 → R**
-- **LogitDA score < 0.29 → NR**
-- **Anything between → NA**
+- **LogitDA score > 0.50 → R** (responders)
+- **LogitDA score < 0.29 → NR** (non-responders)
+- **Anything between → NA** (not applicable)
 
 ## Output Description
 Details on the input/output datasets are provided on the [web tool interface](https://shiehlab.shinyapps.io/immunoresponse-predictor/) and this [GitHub page](https://github.com/DrGroove96/ImmunoResponsePredictor).
