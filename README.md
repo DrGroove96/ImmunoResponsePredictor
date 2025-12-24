@@ -56,7 +56,7 @@ Once predictions are generated, results can be downloaded as a CSV file containi
 ## Output Predictions
 ### IMvigoz210-PCD4989g (mUC)
 
-The output of IMvigoz210-PCD4989g (mUC) is shown below.
+The output of IMvigoz210-PCD4989g (mUC) is as follows.
 
 <p align="center">
   <img src="Visualizations/PCD(mUC).png" width="900">
