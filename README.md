@@ -40,10 +40,10 @@ Choose from the following pre-trained LogitDA models:
 After uploading your file and selecting the model, click on the **Generate predictions** button to process the data.
 
 The system will:
-- Match your uploaded gene expression data with the required signature genes for the selected model.
-- Normalize gene identifiers to ensure consistency across the dataset.
-- Handle missing genes by imputing data from training means or replacing missing values with zeros.
-- Run predictions using the LogitDA algorithm to classify each sample as Responsive (R) or Non-Responsive (NR).
+- Match your uploaded gene expression data with required signature genes for the selected model.
+- Normalize gene identifiers to reamin the same across the whole dataset.
+- Handle missing values/genes by imputing data from training means or replacing missing values with zeros.
+- Run predictions using the LogitDA model to classify each sample as Responsive (R) or Non-Responsive (NR).
 
 ## Download Predictions
 
@@ -54,7 +54,7 @@ Once predictions are generated, results can be downloaded as a CSV file containi
 - LogitDA_Score - Probability score from logistic regression model
 - LogitDA_score > 0.5 - Binary classification (R/NR)
 - LogitDA_score_label - Improved classification (R/NR/NA)
-- % of applicability - Agreement % between predictions
+- % of applicability - Matching % between predictions
 - iCosinDist_label - Cosine distance-based label (R/NR)
 
 ## Output Predictions
@@ -75,10 +75,9 @@ The output of IMvigoz210-PCD4989g (mUC) is as follows.
 Details on the input/output datasets are provided on the [web tool interface](https://shiehlab.shinyapps.io/immunoresponse-predictor/) and this [GitHub page](https://github.com/DrGroove96/ImmunoResponsePredictor).
 
 ## Applicability Interpretation
-
-High applicability (e.g., >70%) indicates that the new cohort lies in a similar expression space as the training data and that predictions align with the ORR-informed geometric. In such settings, per-patient predictions may support treatment selection or trial enrichment.
-
-Low applicability means that the cohort falls outside the model’s applicability domain, and predictions should not be considered to guide clinical decisions.
+We define the percentage of applicability by iCosineDist labels, a metric to quantify the applicability of LogitDA predictions to future datasets, as follows.
+The percentage of applicability = (total matches/total samples)×100 % ,
+where total matches refer to the number of samples whose LogitDA-predicted labels align with those assigned by iCosineDist, and total samples denotes the total number of uploaded test samples. CosineDist measures how close a new sample to the responder (R) and non-responder (NR) groups in the training datasets; however, prediction based on CosineDist requires predefined thresholds, which are difficult to derive in practice. In contrast, iCosineDist incorporates domain knowledge by integrating ORR information for mUC/mRCC. Although conservative, this ORR-based ratio is a reasonable reflection of the expected proportion of responders to ICIs in mUC/mRCC and is derived from large-scale clinical datasets
 
 ## Run Locally (R / Shiny App)
 To run the ImmunoResponse Predictor locally (i.e., on your own computer):
