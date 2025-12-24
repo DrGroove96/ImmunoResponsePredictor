@@ -75,13 +75,13 @@ The output of IMvigoz210-PCD4989g (mUC) is as follows.
 Details on the input/output datasets are provided on the [web tool interface](https://shiehlab.shinyapps.io/immunoresponse-predictor/) and this [GitHub page](https://github.com/DrGroove96/ImmunoResponsePredictor).
 
 ## Applicability Interpretation
-We define the percentage of applicability by iCosineDist labels, a metric to quantify the applicability of LogitDA predictions to future datasets, as follows.
+We define the percentage of applicability by iCosineDist labels, a metric to quantify the applicability of LogitDA predictions to future datasets, as follows:
 
-Applicability (%) = (Number of Matches / Total Number of Samples) × 100
+Applicability (%) = (Number of Matches / Total Number of Samples) × 100, 
 
-where total matches refer to the number of samples whose LogitDA-predicted labels align with those assigned by iCosineDist, and total samples denotes the total number of uploaded test samples. CosineDist measures how close a new sample to the responder (R) and non-responder (NR) groups in the training datasets; however, prediction based on CosineDist requires predefined thresholds, which are difficult to derive in practice. 
+where - total matches refer to the number of samples whose LogitDA-predicted labels align with those assigned by iCosineDist, and - total samples denotes the total number of uploaded test samples. 
 
-In contrast, iCosineDist incorporates domain knowledge by integrating ORR information for mUC/mRCC. 
+CosineDist measures how close a new sample to the responder (R) and non-responder (NR) groups in the training datasets; however, prediction based on CosineDist requires predefined thresholds, which are difficult to derive in practice. In contrast, iCosineDist incorporates domain knowledge by integrating ORR information for mUC/mRCC. 
 
 Although conservative, this ORR-based ratio is a reasonable reflection of the expected proportion of responders to ICIs in mUC/mRCC and is derived from large-scale clinical datasets
 
