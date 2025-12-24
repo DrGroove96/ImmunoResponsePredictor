@@ -11,7 +11,7 @@ In practice, users upload RNA-seq log2-TPM profile datasets through the GUI. The
 ![](Visualizations/Dashboard.png)
 
 ## GUI Input Data required
-To use the graphical user interface (GUI), users are required to upload a pre-treatment RNA-sequencing count matrix or microarray-based gene expression matrix in CSV format, including either a predefined signature gene panel or whole-transcriptome expression profiles derived from biopsy or surgical specimens.
+To use the GUI tool, users upload a pre-treatment RNA-seq count or microarray expression matrix (.csv), containing either signature genes or whole-transcriptome data, from biopsy or surgical samples. Gene identifiers may be provided as gene symbols, Entrez IDs, Ensembl gene IDs, or Ensembl transcript IDs.
 
 ### Gene IDs
 
