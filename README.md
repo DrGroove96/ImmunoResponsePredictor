@@ -49,9 +49,13 @@ The system will:
 
 Once predictions are generated, results can be downloaded as a CSV file containing:
 - Sample ID
-- Cosine distances to Responder and Non-Responder groups
-- Predicted response (R or NR)
-- Applicability score
+- CosDist_2_Rs - Cosine distance to responder group
+- CosDist_2_NRs - Cosine distance to non-responder group
+- LogitDA_Score - Probability score from logistic regression model
+- LogitDA_score > 0.5 - Binary classification (R/NR)
+- LogitDA_score_label - Improved classification (R/NR/NA)
+- % of applicability - Agreement % between predictions
+- iCosinDist_label - Cosine distance-based label (R/NR)
 
 ## Output Predictions
 ### IMvigoz210-PCD4989g (mUC)
