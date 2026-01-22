@@ -5,6 +5,8 @@ This repository contains the code and paper for the ImmunoResponse Predictor gra
 
 📖 Please read the full paper here: [Paper Link](https://pmc.ncbi.nlm.nih.gov/articles/PMC12675356/)
 
+ImmunoResonsePredictor is an interactive R-based Shiny web application that allows users to generate predictions using pre-trained predictors on uploaded test data. The app supports logistic regression models for two different types of cancer: mUC (metastasis urothelial carcinoma) and mRCC (metastasis renal cell carcinoma). Users can upload a test dataset, select a model, and generate predictions, which can then be downloaded as a CSV file for further analysis.
+
 In practice, users upload RNA-seq log2-TPM profile datasets through the GUI. The tool outputs (1) each patient’s cosine distance to responders/non-responders and the corresponding predicted label, and (2) the cohort-level % applicability. High applicability (e.g., >70%) indicates that the new cohort lies in a similar expression space as the training data and that predictions align with the ORR-informed geometric. In such settings, per-patient predictions may support treatment selection or trial enrichment. Low applicability means that the cohort falls outside the model’s applicability domain, and predictions should not be considered to guide clinical decisions.
 
 ## User Interface
@@ -89,7 +91,7 @@ Although conservative, this ORR-based ratio is a reasonable reflection of the ex
 
 ## Requirements
 
-## Step 2. Install Required R Packages:
+## Step 1. Install Required R Packages:
 
 ### R Packages:
 - This project uses renv to manage all required packages and their versions.
@@ -121,7 +123,7 @@ Although conservative, this ORR-based ratio is a reasonable reflection of the ex
   source("install.R")
 
 
-## Step 3: Confirm Directory Structure 
+## Step 2: Confirm Directory Structure 
 - After installing the packages please check the Shiny App Structure:
 
 - The folder should be arranged as below:
@@ -147,7 +149,7 @@ ImmunoResponsePredictor/
     
 - Apart from this you will also need train and test datasets (count matrix) which are not provided here with this Github repository due to copyright and sensitivity issues. The data can be provided upon request. 
 
-## Step 4. Run the Shiny App Locally
+## Step 3. Run the Shiny App Locally
 
 A.	Open the main app file:
 In RStudio, open app.R.
