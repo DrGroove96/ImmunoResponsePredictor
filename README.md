@@ -1,7 +1,7 @@
 # 🧬 ImmunoResponse Predictor
 ## Gene Signature for Response Prediction to Immunotherapy and Prognostic Markers in Metastatic Urothelial Carcinoma
 
-This repository contains the code and paper for the ImmunoResponse Predictor graphical user interface (GUI).
+This repository contains the code and paper for the ImmunoResponse Predictor GUI. 
 
 📖 Please read the full paper here: [Paper Link](https://pmc.ncbi.nlm.nih.gov/articles/PMC12675356/)
 
