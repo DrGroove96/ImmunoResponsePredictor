@@ -87,25 +87,120 @@ CosineDist measures how close a new sample to the responder (R) and non-responde
 
 Although conservative, this ORR-based ratio is a reasonable reflection of the expected proportion of responders to ICIs in mUC/mRCC and is derived from large-scale clinical datasets
 
-## Run Locally (R / Shiny App)
-To run the ImmunoResponse Predictor locally (i.e., on your own computer):
+## Requirements
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/<your-username>/ImmunoResponse-Predictor.git
-   cd ImmunoResponse-Predictor
-2. **install.packages**
-   ```
-   install.packages(c("shiny", "glmnet", "data.table"))
-   install.packages("BiocManager")
-   BiocManager::install(c("org.Hs.eg.db", "AnnotationDbi"))
-3. **Run App.R**
+## Step 2. Install Required R Packages:
+
+### R Packages:
+- This project uses renv to manage all required packages and their versions.
+- The recommended way to install all dependencies is to run in your R console (from the project directory):
+
   ```r
-   library(shiny)
-   shiny::runApp("app.R")
-   rsconnect::setAccountInfo(
-     name   = "shiehlab",
-     token  = "<TOKEN>",
-     secret = "<SECRET>"
-   )
+  install.packages("renv")
+  renv::restore()
 
+- or the packages can be installed manually as given below:
+
+  ```r
+  Libraries: The following libraries are required:
+  install.packages(c(
+  "shiny",
+  "glmnet",
+  "data.table"
+  ))
+
+- Install Bioconductor packages
+  ```r
+    if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+    BiocManager::install(c("sva", "preprocessCore"))
+
+- A user just needs to run in their R console:
+
+  ```r
+  source("install.R")
+
+
+## Step 3: Confirm Directory Structure 
+- After installing the packages please check the Shiny App Structure:
+
+- The folder should be arranged as below:
+
+
+ImmunoResponsePredictor/
+
+ ├── app.R
+ 
+ ├── renv.lock
+ 
+ ├── README.md
+ 
+ ├── Dockerfile
+ 
+ ├── models/
+ 
+ │   ├── logistic-Model-train-muc-test-muc.rds
+ 
+ │   └── logistic-Model-train-rcc-test-rcc.rds
+
+
+    
+- Apart from this you will also need train and test datasets (count matrix) which are not provided here with this Github repository due to copyright and sensitivity issues. The data can be provided upon request. 
+
+## Step 4. Run the Shiny App Locally
+
+A.	Open the main app file:
+In RStudio, open app.R.
+
+B.	Run the app:
+Click the “Run App” button in RStudio (top-right of the script editor).
+Or, in the R console, run:
+  ```r
+  shiny::runApp()
+```
+
+(Ensure the working directory is set to the ImmunoResponsePredictor folder.)
+
+Step 5. Access the app:
+-	The Shiny app should open in a browser window.
+-	To interact with the app to verify it works use a “Browse” button for uploading .csv files containing gene expression data, 
+-	a status indicator will confirm that the “Upload complete”, 
+-	then on a dropdown menu select the appropriate pre-trained LogitDA model (mUC or mRCC), and click “Make predictions” button to initiate response prediction on the uploaded data, and 
+-	at last, click on “Download predictions” button to export the results in .csv format. 
+-	In addition, the interface provides real-time feedback, including the number of rows in the output predictions and confirmation messages upon successful prediction generation.
+
+
+# 2.  Running the ImmunoResponsePredictor Online:
+You can use the GUI directly in your browser without downloading or installing anything locally. Simply visit the following link:
+
+    https://logitda.shinyapps.io/immunoresponsepredictor/
+
+## Important Note for mRCC Model Users
+The mRCC model requires intensive preprocessing using "ComBat + Quantile" normalization due to batch effect correction and distribution alignment. These steps are computationally heavy and memory-intensive, making it difficult to run them directly on the hosting server due to RAM limitations.
+
+To address this, we recommend users preprocess their test data locally using the provided preprocess.R script included in the repository.
+
+### Please preprocess your test gene expression matrix using ComBat + Quantile normalization before uploading it to the web app.
+
+## Instructions for Using the Online App
+- Upload your preprocessed ```Test.csv``` file.
+
+- Select the desired pre-trained model (```mUC``` or ```mRCC```) from the dropdown.
+
+- Click the “Make predictions” button to initiate processing.
+
+- Download the resulting predictions as a ```.csv``` file.
+
+The app will provide real-time feedback during each step, confirming successful uploads and prediction generation.              
+
+
+Clone the repository:
+
+```bash
+git clone https://github.com/rajatbutola/ImmunoResponsePredictor.git
+```
+ 
+### Test Files: Two test files have been uploaded in **Test Files** folder that user can utilize to operate the App.
+
+- **Kim Test Data**: The Kim dataset can also be accessed through "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176307" link. It is open source.
+- **Moreno Test Data**: The Moreno dataset can also be accessed through "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE111636" link. It is open source.
