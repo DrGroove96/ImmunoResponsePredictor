@@ -6,16 +6,11 @@
 library(shiny)
 library(glmnet)
 library(data.table)
-
-## --- Bioconductor annotation libs for ID mapping ---
 library(org.Hs.eg.db)
 library(AnnotationDbi)
 
-options(shiny.maxRequestSize = 40 * 1024^2)
-
-###############################################################
-# Helpers
-###############################################################
+#You can adjust the size to deploy the app to ShinyApp.io (better under 1GB memory)
+#options(shiny.maxRequestSize = 40 * 1024^2)
 
 loadTable <- function(file, transpose = FALSE, convertToMatrix = TRUE,
                       sep = ",", header = TRUE) {
@@ -26,50 +21,45 @@ loadTable <- function(file, transpose = FALSE, convertToMatrix = TRUE,
   return(data)
 }
 
-# last-resort NA scrubber
+# Remove NA values and replace with 0
 scrub_na <- function(M, fill = 0) {
   M[is.na(M)] <- fill
   M
 }
 
-# Generic cleaning of gene IDs:
-# - trim, strip transcript version, X1234 -> 1234, uppercase
+# Make sure Gene IDs are in the correct format
 clean_gene_ids <- function(ids) {
   ids2 <- trimws(ids)
-  ids2 <- sub("\\.\\d+$", "", ids2)          # strip .version at end
-  ids2 <- sub("^X([0-9]+)$", "\\1", ids2)    # X1234 -> 1234
+  ids2 <- sub("\\.\\d+$", "", ids2)          
+  ids2 <- sub("^X([0-9]+)$", "\\1", ids2)   
   toupper(ids2)
 }
 
-# Calculate log2(TPM+1) from counts
-# counts: matrix with samples as rows, genes as columns
-# Returns: log2(TPM+1) normalized matrix
+# Create a matrix with samples as rows and genes as columns
+# Return log2(TPM+1) normalized matrix
 calculate_log2TPMp1 <- function(counts) {
-  # Use constant gene length (2000 bp) for all genes
+# for our datasets, the most we encounter is 2000, adjust as needed
   gene_length <- 2000
-  
-  # Calculate counts per length (cdl)
+
   cdl <- counts / gene_length
   
-  # Calculate TPM: normalize by row sums (per sample)
+  # Calculate TPM and normalize by row sums (per sample)
   sums <- rowSums(cdl, na.rm = TRUE)
-  sums[sums == 0] <- 1  # Avoid division by zero
+  sums[sums == 0] <- 1  
   tpm <- cdl / sums * 1e6
   
-  # Apply log2(TPM + 1)
+  # Apply log2(TPM + 1) on the dataset (row)
   log2TPMp1 <- log1p(tpm) / log(2)
-  
   return(log2TPMp1)
 }
 
 ###############################################################
-# Build synonym-to-model mapping tables (for renaming cols)
+# Mapping Gene IDs to Model IDs
 ###############################################################
 
-# Map everything → mUC Entrez panel (X<entrez>)
+# Map everything to match the mUC model IDs
 build_mUC_mapping <- function(mUC_entrez, mUC_model_ids) {
-  keys <- as.character(mUC_entrez)  # Entrez IDs as character
-  
+  keys <- as.character(mUC_entrez)  # we need to convert Entrez IDs to character
   sym   <- AnnotationDbi::mapIds(
     org.Hs.eg.db, keys = keys,
     column = "SYMBOL", keytype = "ENTREZID",
@@ -91,11 +81,11 @@ build_mUC_mapping <- function(mUC_entrez, mUC_model_ids) {
   
   for (i in seq_along(keys)) {
     ent <- keys[i]
-    mid <- mUC_model_ids[i]   # e.g. "X9700"
-    
+    mid <- mUC_model_ids[i]   # this is the model ID, "X9700"
+
     s <- c(
-      mid,           # exact model ID (X9700)
-      ent            # plain Entrez ("9700")
+      mid,           
+      ent
     )
     if (!is.na(sym[i]))  s <- c(s, sym[i])
     if (!is.na(ensg[i])) s <- c(s, ensg[i])
@@ -115,12 +105,12 @@ build_mUC_mapping <- function(mUC_entrez, mUC_model_ids) {
   names(synonym_to_model) <- all_syn[keep]
   
   list(
-    synonym_to_model = synonym_to_model,   # cleaned synonym -> "X9700"
+    synonym_to_model = synonym_to_model,
     model_ids        = mUC_model_ids
   )
 }
 
-# Map everything → mRCC ENST panel (ENSTxxx.y) using org.Hs.eg.db
+# Map everything to the mRCC model IDs
 build_mRCC_mapping <- function(mRCC_model_ids) {
   base <- sub("\\.\\d+$", "", mRCC_model_ids)  
   
@@ -141,7 +131,6 @@ build_mRCC_mapping <- function(mRCC_model_ids) {
     multiVals = "first"
   )
   
-  # From ENTREZ, pull ALIAS symbols
   alias_list <- rep(list(NULL), length(base))
   names(alias_list) <- base
   valid_entrez <- !is.na(entrez)
@@ -187,7 +176,7 @@ build_mRCC_mapping <- function(mRCC_model_ids) {
   )
 }
 
-# Generic colname normalizer that only RENAMEs columns, does not touch values
+# This is to normalize the column names to the model IDs, does not change the values
 normalize_colnames_generic <- function(cols, mapping) {
   cleaned <- clean_gene_ids(cols)
   out     <- cols
@@ -197,8 +186,9 @@ normalize_colnames_generic <- function(cols, mapping) {
 }
 
 ###############################################################
-# ===================== UI =========================
+# GUI Panel Instructions
 ###############################################################
+# You can edit mostly this part to anything you want
 ui <- fluidPage(
   titlePanel("ImmunoResponse Predictor"),
   sidebarLayout(
@@ -238,12 +228,14 @@ ui <- fluidPage(
       p("8. ", strong("Download Predictions:"), "After predictions are made, you can download a CSV file containing:"),
       tags$ul(
         tags$li(strong("Sample ID")),
-        tags$li(strong("Cosine Distances from Rs and NRs groups")),
-        tags$li(strong("LogitDA_Score")),
-        tags$li(strong("LogitDA_score_label")),
-        tags$li(strong("iCosinDist_label")),
-        tags$li(strong("% of applicability (Number of Matches / Total Number of Samples) × 100"))
+        tags$li(strong("Cosine Distances from Rs and NRs groups")), 
+        tags$li(strong("LogitDA_Score")), 
+        tags$li(strong("LogitDA_score_label")), 
+        tags$li(strong("iCosinDist_label")), 
+        tags$li(strong("% of applicability"), " (Number of Matches / Total Number of Samples) × 100")
       ),
+      br(),
+      
       br(),
       textOutput("status"),
       textOutput("predictionsCount")
@@ -252,7 +244,7 @@ ui <- fluidPage(
 )
 
 ###############################################################
-# ===================== SERVER =========================
+# Connect to the backend of ShinyApp
 ###############################################################
 server <- function(input, output, session) {
   predictions <- reactiveVal(NULL)
@@ -274,70 +266,47 @@ server <- function(input, output, session) {
     list(data = expr.test0_matrix, sampleIDs = sampleIDs)
   })
   
-  # Cosine-distance helpers
+  # This part: we need it to compute the correct cosine distance for SINGLE SAMPLE
+  # This will make sure that the single samples do not get NA values for Cosince Distance2 NRs, Rs, etc...
   compute_average_cosine_distances <- function(y1, y2, x) {
-    # Convert x to vector if it's a matrix
-    if (is.matrix(x)) {
-      x <- as.vector(x)
+    # It transforms the input to a numeric vector
+    x <- as.vector(as.numeric(x))
+    # Handle NA values
+    if (any(is.na(x))) {
+      x[is.na(x)] <- 0
     }
-    
     cosine_distance <- function(a, b) {
-      # Ensure both are vectors
-      a <- as.vector(a)
-      b <- as.vector(b)
-      
-      # Check if vectors have same length
-      if (length(a) != length(b)) {
-        warning("Vector length mismatch in cosine_distance: a=", length(a), ", b=", length(b))
-        return(NA_real_)
-      }
+      # Ensure both are numeric vectors
+      a <- as.vector(as.numeric(a))
+      b <- as.vector(as.numeric(b))
+      # Handle NA values
+      if (any(is.na(a))) a[is.na(a)] <- 0
+      if (any(is.na(b))) b[is.na(b)] <- 0
       
       norm_a <- sqrt(sum(a^2, na.rm = TRUE))
       norm_b <- sqrt(sum(b^2, na.rm = TRUE))
-      
-      # Handle zero or NA norms - return NA for invalid cases
-      if (is.na(norm_a) || is.na(norm_b) || norm_a == 0 || norm_b == 0) {
-        return(NA_real_)
-      }
-      
-      # Calculate cosine similarity, then convert to distance
-      cos_sim <- sum(a * b, na.rm = TRUE) / (norm_a * norm_b)
-      # Clamp cosine similarity to [-1, 1] to avoid numerical issues
-      cos_sim <- max(-1, min(1, cos_sim))
-      1 - cos_sim
+      if (is.na(norm_a) || is.na(norm_b) || norm_a == 0 || norm_b == 0) return(NA_real_)
+      1 - sum(a * b, na.rm = TRUE) / (norm_a * norm_b)
     }
     
-    # Check if groups are empty
-    if (nrow(y1) == 0) {
-      warning("y1 (responder group) is empty")
-      avg_distance_R <- NA_real_
+    avg_distance_R  <- if (nrow(y1) > 0 && ncol(y1) > 0) {
+      distances_R <- apply(y1, 1, function(sample) {
+        cosine_distance(x, as.vector(as.numeric(sample)))
+      })
+      result <- mean(distances_R, na.rm = TRUE)
+      if (is.na(result) || is.nan(result)) NA_real_ else result
     } else {
-      # Ensure x and y1 have matching dimensions
-      if (length(x) != ncol(y1)) {
-        warning("Dimension mismatch: x length=", length(x), ", y1 ncol=", ncol(y1))
-        avg_distance_R <- NA_real_
-      } else {
-        distances_R <- apply(y1, 1, function(sample) cosine_distance(x, sample))
-        avg_distance_R <- mean(distances_R, na.rm = TRUE)
-        # If all distances are NA, return NA
-        if (is.nan(avg_distance_R) || all(is.na(distances_R))) avg_distance_R <- NA_real_
-      }
+      NA_real_
     }
     
-    if (nrow(y2) == 0) {
-      warning("y2 (non-responder group) is empty")
-      avg_distance_NR <- NA_real_
+    avg_distance_NR <- if (nrow(y2) > 0 && ncol(y2) > 0) {
+      distances_NR <- apply(y2, 1, function(sample) {
+        cosine_distance(x, as.vector(as.numeric(sample)))
+      })
+      result <- mean(distances_NR, na.rm = TRUE)
+      if (is.na(result) || is.nan(result)) NA_real_ else result
     } else {
-      # Ensure x and y2 have matching dimensions
-      if (length(x) != ncol(y2)) {
-        warning("Dimension mismatch: x length=", length(x), ", y2 ncol=", ncol(y2))
-        avg_distance_NR <- NA_real_
-      } else {
-        distances_NR <- apply(y2, 1, function(sample) cosine_distance(x, sample))
-        avg_distance_NR <- mean(distances_NR, na.rm = TRUE)
-        # If all distances are NA, return NA
-        if (is.nan(avg_distance_NR) || all(is.na(distances_NR))) avg_distance_NR <- NA_real_
-      }
+      NA_real_
     }
     
     c(avg_distance_R, avg_distance_NR)
@@ -406,7 +375,7 @@ server <- function(input, output, session) {
     ml_train_standardized <- ml_train_data[, train_common_idx[!is.na(train_common_idx)], drop = FALSE]
     ml_train_standardized[is.na(ml_train_standardized)] <- 0
     
-    # Load annotations to get responder/non-responder groups
+    # We need to load the true labels for the training data to get the responder/non-responder groups
     if (model_type == "mUC") {
       annot_path <- file.path("models/mUC_response_train.zip")
     } else if (model_type == "mRCC") {
@@ -455,9 +424,14 @@ server <- function(input, output, session) {
     # Compute ML-standardized cosine distances for test samples
     ml_cosdist_list <- vector("list", nrow(ml_test_standardized))
     for (i in seq_len(nrow(ml_test_standardized))) {
-      x_sample_ml <- ml_test_standardized[i, , drop = FALSE]
+      # Extract as vector and convert to numeric (single samples)
+      x_sample_ml <- as.vector(as.numeric(ml_test_standardized[i, , drop = TRUE]))
+      # Handle any remaining NA values
+      if (any(is.na(x_sample_ml))) {
+        x_sample_ml[is.na(x_sample_ml)] <- 0
+      }
       avg_distances_ml <- compute_average_cosine_distances(y1_ml, y2_ml, x_sample_ml)
-      ml_cosdist_list[[i]] <- avg_distances_ml[1]  # CosDist_2_Rs for ML-standardized
+      ml_cosdist_list[[i]] <- as.numeric(avg_distances_ml[1])  # CosDist_2_Rs for ML-standardized
     }
     
     ml_cosdist_2_rs <- unlist(ml_cosdist_list)
@@ -486,13 +460,12 @@ server <- function(input, output, session) {
     list(results_df = results_df, prior_final_percentage = prior_final_percentage)
   }
   
-  # ORR prior (original - kept for backward compatibility if needed)
   apply_orr_prior <- function(results_df, orr = 0.2) {
     results_df <- results_df[order(results_df$CosDist_2_Rs), ]
     total_samples <- nrow(results_df)
     x <- round(total_samples * orr)
     
-    # Same logic as original code: build prior labels and compare to model labels
+    # Build the prior labels and compare to model labels
     results_df$CosineDist_prior <- c(rep("R", x), rep("NR", total_samples - x))
     rs_matching <- sum(results_df$LogitDA_pred_label[1:x] == results_df$CosineDist_prior[1:x])
     nrs_matching <- sum(results_df$LogitDA_pred_label[(x + 1):total_samples] == 
@@ -506,13 +479,12 @@ server <- function(input, output, session) {
     list(results_df = results_df, prior_final_percentage = prior_final_percentage)
   }
   
-  # Calculate % of applicability using ML standardization
+  # Calculate % of applicability using ML standardization (Remember: we use ML results to compute the applicability)
   calculate_ML_standardization_applicability <- function(results_df, test_data_matrix, model_gene_ids, sampleIDs) {
     tryCatch({
       # Load ML-standardized training data
       ml_train_path <- file.path("standardized_ML_log2TPMp1_train.csv.gz")
       if (!file.exists(ml_train_path)) {
-        # If ML training file doesn't exist, fall back to agreement-based calculation
         agreement <- sum(results_df$LogitDA_score_label == results_df$iCosinDist_label, na.rm = TRUE)
         total_valid <- sum(!is.na(results_df$LogitDA_score_label) & !is.na(results_df$iCosinDist_label))
         if (total_valid > 0) {
@@ -577,8 +549,7 @@ server <- function(input, output, session) {
         ml_test_standardized[is.na(ml_test_standardized)] <- 0
       }
       
-      # Calculate ML applicability: percentage of agreement between LogitDA_score_label and iCosinDist_label
-      # This represents how well the ML-standardized predictions align with cosine distance labels
+      # Definition of applicability: total matches / total number of samples
       agreement <- sum(results_df$LogitDA_score_label == results_df$iCosinDist_label, na.rm = TRUE)
       total_valid <- sum(!is.na(results_df$LogitDA_score_label) & !is.na(results_df$iCosinDist_label))
       
@@ -590,7 +561,6 @@ server <- function(input, output, session) {
       
       ml_applicability
     }, error = function(e) {
-      # On error, fall back to agreement-based calculation
       agreement <- sum(results_df$LogitDA_score_label == results_df$iCosinDist_label, na.rm = TRUE)
       total_valid <- sum(!is.na(results_df$LogitDA_score_label) & !is.na(results_df$iCosinDist_label))
       if (total_valid > 0) {
@@ -636,7 +606,6 @@ server <- function(input, output, session) {
         # Normalize uploaded gene IDs to model IDs
         colnames(expr.test0_matrix) <- normalize_colnames_generic(colnames(expr.test0_matrix), mapping)
         
-        # Model gene panel (strip any X prefixes)
         gene_ids_clean       <- sub("^X", "", model_gene_ids)
         test_colnames_clean  <- sub("^X", "", colnames(expr.test0_matrix))
         match_idx            <- match(gene_ids_clean, test_colnames_clean)
@@ -654,7 +623,7 @@ server <- function(input, output, session) {
           if (!is.matrix(train_data_raw_mUC)) stop("mUC training data is not a matrix")
           sampleIDs_train <- rownames(train_data_raw_mUC)
           
-          # If some genes missing in test → add zero columns
+          # Handle missing genes in the test data
           if (any(missing_mask)) {
             add_mat <- matrix(0,
                               nrow = nrow(expr.test0_matrix),
@@ -665,10 +634,8 @@ server <- function(input, output, session) {
             match_idx <- match(gene_ids_clean, test_colnames_clean)
           }
           
-          # Build test matrix in model-gene order
           x.test <- expr.test0_matrix[, match_idx, drop = FALSE]
           
-          # Align train columns with test order and scale
           train_cols_order <- match(
             sub("^X", "", colnames(x.test)),
             sub("^X", "", colnames(train_data_raw_mUC))
@@ -680,21 +647,22 @@ server <- function(input, output, session) {
           trainM <- train_data_raw_mUC[, train_cols_order, drop = FALSE]
           testM  <- x.test
           
-          # Scale training data
           train_data <- scale(trainM)
+          if (nrow(testM) == 1) {
+            train_means <- attr(train_data, "scaled:center")
+            train_sds <- attr(train_data, "scaled:scale")
+            train_sds[train_sds == 0 | is.na(train_sds)] <- 1  
+            x.test <- sweep(testM, 2, train_means, "-")
+            x.test <- sweep(x.test, 2, train_sds, "/")
+            x.test <- as.matrix(x.test)
+            rownames(x.test) <- rownames(testM)
+            colnames(x.test) <- colnames(testM)
+          } else {
+            x.test <- scale(testM)
+          }
           train_data[is.na(train_data)] <- 0
+          x.test[is.na(x.test) | is.nan(x.test)] <- 0
           
-          # Scale test data using training statistics (not independent scaling)
-          train_means <- attr(train_data, "scaled:center")
-          train_sds <- attr(train_data, "scaled:scale")
-          train_sds[train_sds == 0 | is.na(train_sds)] <- 1  # Avoid division by zero
-          
-          # Apply training statistics to test data
-          x.test <- sweep(testM, 2, train_means, "-")
-          x.test <- sweep(x.test, 2, train_sds, "/")
-          x.test[is.na(x.test)] <- 0
-          
-          # TRAIN annotations
           annot_zip_path <- file.path("models/mUC_response_train.zip")
           if (!file.exists(annot_zip_path)) stop("Annotation zip file not found: ", annot_zip_path)
           sampleAnnot.train <- read.csv(unz(annot_zip_path, "response_train.csv"))
@@ -719,7 +687,6 @@ server <- function(input, output, session) {
           y2 <- train_data_ordered[sampleAnnot.train$RESPONSE == 0 & !is.na(sampleAnnot.train$RESPONSE), , drop = FALSE]
           
         } else if (input$modelFile == "logistic-Model-train-rcc-test-rcc.rds") {
-          # ----- mRCC block -----
           train_zip_path <- file.path("models/standardized_QN_TPM_train.csv.gz")
           if (!file.exists(train_zip_path)) stop("Training csv.gz file not found: ", train_zip_path)
           train_data_raw_mRCC <- loadTable(
@@ -729,7 +696,6 @@ server <- function(input, output, session) {
           if (!is.matrix(train_data_raw_mRCC)) stop("RCC training data is not a matrix")
           sampleIDs_train <- rownames(train_data_raw_mRCC)
           
-          # Per-gene training means (for imputation)
           train_means_vec <- colMeans(
             train_data_raw_mRCC[, intersect(colnames(train_data_raw_mRCC), gene_ids_clean), drop = FALSE],
             na.rm = TRUE
@@ -738,7 +704,6 @@ server <- function(input, output, session) {
           common_genes <- intersect(names(train_means_vec), gene_ids_clean)
           train_means_full[common_genes] <- train_means_vec[common_genes]
           
-          # Impute missing genes in TEST using training means (fallback 0)
           if (any(missing_mask)) {
             add_vals <- train_means_full[missing_mask]
             add_vals[is.na(add_vals)] <- 0
@@ -753,7 +718,6 @@ server <- function(input, output, session) {
             match_idx <- match(gene_ids_clean, test_colnames_clean)
           }
           
-          # Build matrices in model-gene order (no extra scaling: QN+standardized already)
           x.test <- expr.test0_matrix[, match_idx, drop = FALSE]
           train_cols_order <- match(
             sub("^X", "", colnames(x.test)),
@@ -765,7 +729,6 @@ server <- function(input, output, session) {
           }
           train_data <- train_data_raw_mRCC[, train_cols_order, drop = FALSE]
           
-          # TRAIN annotations
           annot_zip_path <- file.path("models/RCC_response_train.zip")
           if (!file.exists(annot_zip_path)) stop("Annotation zip file not found: ", annot_zip_path)
           sampleAnnot.train <- read.csv(unz(annot_zip_path, "response_train.csv"))
@@ -792,29 +755,13 @@ server <- function(input, output, session) {
           stop("Please select a valid model.")
         }
         
-        # Validate y1 and y2 are not empty
-        if (nrow(y1) == 0) {
-          stop("No responder samples found in training data. Cannot compute cosine distances to responder group.")
-        }
-        if (nrow(y2) == 0) {
-          stop("No non-responder samples found in training data. Cannot compute cosine distances to non-responder group.")
+        if (anyNA(x.test) || any(is.nan(x.test))) {
+          x.test[is.na(x.test) | is.nan(x.test)] <- 0
+          output$status <- renderText("Some NA/NaN values detected after preprocessing; replaced with 0 to proceed.")
         }
         
-        # Final guard: ensure no NA in x.test before prediction
-        if (anyNA(x.test)) {
-          x.test <- scrub_na(x.test, fill = 0)
-          output$status <- renderText("Some NA values detected after preprocessing; replaced with 0 to proceed.")
-        }
-        
-        # Check for zero-norm test samples (all zeros)
-        test_norms <- sqrt(rowSums(x.test^2, na.rm = TRUE))
-        if (any(test_norms == 0, na.rm = TRUE)) {
-          warning("Some test samples have zero norm (all zeros). Cosine distances may be NA for these samples.")
-        }
-        
-        # ---------------- Manual logistic prediction ----------------
         x.test <- as.matrix(x.test)
-        if (any(is.na(x.test))) stop("NA values detected in x.test before prediction")
+        if (any(is.na(x.test)) || any(is.nan(x.test))) stop("NA/NaN values detected in x.test before prediction")
         beta <- as.matrix(bestModel$beta)
         a0   <- bestModel$a0
         if (ncol(x.test) != nrow(beta)) {
@@ -826,52 +773,28 @@ server <- function(input, output, session) {
         pred_labels <- ifelse(pred_class == 1, "R", "NR")
         
         # ---------------- Cosine distance block ----------------
-        # Diagnostic: Check dimensions and sample norms
-        cat("y1 dimensions:", nrow(y1), "x", ncol(y1), "\n", file = stderr())
-        cat("y2 dimensions:", nrow(y2), "x", ncol(y2), "\n", file = stderr())
-        cat("x.test dimensions:", nrow(x.test), "x", ncol(x.test), "\n", file = stderr())
-        
-        # Check if y1 and y2 have any non-zero values
-        y1_norms <- sqrt(rowSums(y1^2, na.rm = TRUE))
-        y2_norms <- sqrt(rowSums(y2^2, na.rm = TRUE))
-        cat("y1 samples with zero norm:", sum(y1_norms == 0, na.rm = TRUE), "out of", length(y1_norms), "\n", file = stderr())
-        cat("y2 samples with zero norm:", sum(y2_norms == 0, na.rm = TRUE), "out of", length(y2_norms), "\n", file = stderr())
-        
         results_list <- vector("list", nrow(x.test))
         for (i in seq_len(nrow(x.test))) {
-          x_sample <- x.test[i, , drop = FALSE]
-          # Convert to vector for cosine distance calculation
-          x_sample_vec <- as.vector(x_sample)
-          
-          # Check if test sample has zero norm
-          x_norm <- sqrt(sum(x_sample_vec^2, na.rm = TRUE))
-          cat("Sample", i, "- x_norm:", x_norm, "\n", file = stderr())
-          if (x_norm == 0) {
-            cat("Warning: Test sample", i, "has zero norm (all zeros)\n", file = stderr())
+          # Extract as vector and convert to numeric (critical for single samples)
+          x_sample <- as.vector(as.numeric(x.test[i, , drop = TRUE]))
+          # Handle any remaining NA values
+          if (any(is.na(x_sample))) {
+            x_sample[is.na(x_sample)] <- 0
           }
-          
-          # Verify dimensions match
-          if (length(x_sample_vec) != ncol(y1) || length(x_sample_vec) != ncol(y2)) {
-            cat("Error: Dimension mismatch - x_sample length:", length(x_sample_vec), 
-                ", y1 ncol:", ncol(y1), ", y2 ncol:", ncol(y2), "\n", file = stderr())
-            avg_distances <- c(NA_real_, NA_real_)
-          } else {
-            avg_distances <- compute_average_cosine_distances(y1, y2, x_sample_vec)
-            cat("Sample", i, "- CosDist_2_Rs:", avg_distances[1], ", CosDist_2_NRs:", avg_distances[2], "\n", file = stderr())
-          }
-          # Create data.frame with all columns
+          avg_distances <- compute_average_cosine_distances(y1, y2, x_sample)
+          # Make sure all dataframes columns are numeric
           results_list[[i]] <- data.frame(
-            CosDist_2_Rs          = avg_distances[1],
-            CosDist_2_NRs         = avg_distances[2],
-            LogitDA_Score         = pred_prob[i],
-            LogitDA_pred_label    = pred_labels[i],
+            CosDist_2_Rs          = as.numeric(avg_distances[1]),
+            CosDist_2_NRs         = as.numeric(avg_distances[2]),
+            LogitDA_Score         = as.numeric(pred_prob[i]),
+            LogitDA_pred_label    = as.character(pred_labels[i]),
             stringsAsFactors = FALSE
           )
         }
         results_df <- do.call(rbind, results_list)
         results_df$sampleID <- sampleIDs
         
-        # Add LogitDA_score_label based on LogitDA_Score thresholds
+        # Nathan's thershold code
         results_df$LogitDA_score_label <- sapply(results_df$LogitDA_Score, function(s) {
           if (s >= 0.5002) "R" else if (s < 0.2895) "NR" else NA_character_
         })
@@ -880,11 +803,11 @@ server <- function(input, output, session) {
         results_df <- results_df[, c("sampleID", setdiff(names(results_df), "sampleID"))]
         stopifnot(all(results_df$sampleID == sampleIDs))
         
-        # Replace output names: Moreno -> The53, Kim -> UNC-108
+        # Revision Made by Shen-Han Chiu, we don't call Kim anymore, it's UNC-108 now. 
+        # Same goes for Moreno. 
         results_df$sampleID <- gsub("Moreno", "The53", results_df$sampleID)
         results_df$sampleID <- gsub("Kim", "UNC-108", results_df$sampleID)
         
-        # ---------------- Compute iCosinDist_label ----------------
         # Determine model type
         model_type <- if (input$modelFile == "logistic-Model-train-muc-test-muc.rds") {
           "mUC"
@@ -894,8 +817,7 @@ server <- function(input, output, session) {
           stop("Unknown model type")
         }
         
-        # For mUC: Use ML standardization (IMvigor210)
-        # For mRCC: Use original ST results (original cosine distances)
+        
         if (model_type == "mUC") {
           # Apply ML standardization and compute cosine distances for iCosinDist_label
           # mUC uses IMvigor210
@@ -906,7 +828,6 @@ server <- function(input, output, session) {
             sampleIDs = sampleIDs
           )
           
-          # ORR prior with ML standardization for iCosinDist_label
           orr_results <- apply_orr_prior_ML(
             results_df = results_df,
             ml_cosdist_2_rs = ml_standardization_result$ml_cosdist_2_rs,
@@ -914,16 +835,12 @@ server <- function(input, output, session) {
           )
         } else {
           # For mRCC: Use original ST results (original cosine distances)
-          # ORR prior with original cosine distances
           orr_results <- apply_orr_prior(results_df, orr = 0.2)
         }
         results_df <- orr_results$results_df
         
-        # Calculate % of applicability
-        # For mUC: Use ML standardization
-        # For mRCC: Use original ORR prior percentage (ST approach)
+        # mUC and mRCC still use ST appraoch to compute cosine distance, but ML standardization is for applicability results
         if (model_type == "mUC") {
-          # Calculate % of applicability using ML standardization for mUC
           ml_applicability <- calculate_ML_standardization_applicability(
             results_df = results_df,
             test_data_matrix = expr.test0_matrix,
@@ -932,34 +849,27 @@ server <- function(input, output, session) {
           )
           applicability_percentage <- ml_applicability
         } else {
-          # For mRCC: Use original ORR prior percentage (ST approach)
           applicability_percentage <- orr_results$prior_final_percentage
         }
         
-        # Save results with appropriate applicability percentage
         results_df  <- save_and_report_results(
           results_df = results_df,
           prior_final_percentage = applicability_percentage
         )
         
-        # Remove internal-only prediction label column from final outputs
         if ("LogitDA_pred_label" %in% names(results_df)) {
           results_df$LogitDA_pred_label <- NULL
         }
         
-        # Reorder columns: iCosinDist_label before % of applicability
         col_order <- c("sampleID", "CosDist_2_Rs", "CosDist_2_NRs", "LogitDA_Score", 
                        "LogitDA_score_label", "iCosinDist_label", "% of applicability")
-        # Add any remaining columns that might not be in the standard order
         remaining_cols <- setdiff(names(results_df), col_order)
         col_order <- c(col_order, remaining_cols)
-        # Keep only columns that exist
         col_order <- col_order[col_order %in% names(results_df)]
         results_df <- results_df[, col_order, drop = FALSE]
-        
         predictions(results_df)
         
-        # ---------------- UI feedback ----------------
+        # ---------------- Generate Results ----------------
         msg_bits <- c("Predictions generated successfully!")
         if (any(missing_mask)) {
           listed <- paste(head(gene_ids_clean[missing_mask], 8), collapse = ", ")
@@ -990,7 +900,7 @@ server <- function(input, output, session) {
     content = function(file) {
       preds <- predictions()
       if (is.null(preds)) stop("No predictions available to download. Please generate predictions first.")
-      # If only a single sample was uploaded, export a minimal set of columns.
+      # If only a single sample was uploaded, export the core prediction columns
       if (nrow(preds) == 1) {
         keep_cols <- c("sampleID", "CosDist_2_Rs", "CosDist_2_NRs", "LogitDA_Score", "LogitDA_score_label")
         missing_cols <- setdiff(keep_cols, colnames(preds))
@@ -1002,6 +912,7 @@ server <- function(input, output, session) {
         fwrite(preds, file, row.names = FALSE, na = "NA")
       }
     },
+    # output CSV file
     contentType = "text/csv"
   )
   
